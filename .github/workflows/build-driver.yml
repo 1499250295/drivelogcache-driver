@@ -12,21 +12,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install WDK
-        uses: microsoft/setup-wdk@v1
-        with:
-          wdk-version: '10.0.26100'
-
-      - name: Locate MSBuild
+      - name: Download and mount EWDK
         shell: pwsh
         run: |
-          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          "VSPATH=$vs" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?LinkId=2362109' -OutFile EWDK.iso
+          $m = Mount-DiskImage -ImagePath (Resolve-Path EWDK.iso).Path -PassThru
+          $vol = ($m | Get-Volume).DriveLetter
+          "EWDK_DRIVE=$($vol):" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding ascii
 
       - name: Build x64 Release
         shell: cmd
         run: |
-          "%VSPATH%\MSBuild\Current\Bin\amd64\MSBuild.exe" src\Driver\drivelogcache.vcxproj /p:Configuration=Release /p:Platform=x64 /p:OutDir=%CD%\out\\ /p:IntDir=%CD%\out\obj\\ /m /v:m
+          call %EWDK_DRIVE%\LaunchBuildEnv.cmd
+          msbuild src\Driver\drivelogcache.vcxproj /p:Configuration=Release /p:Platform=x64 /p:OutDir=%CD%\out\ /p:IntDir=%CD%\out\obj\ /m /v:m
 
       - name: Check output
         shell: pwsh
