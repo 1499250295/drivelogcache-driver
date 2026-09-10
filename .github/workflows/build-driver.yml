@@ -1,0 +1,45 @@
+name: build-driver
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['src/Driver/**', '.github/workflows/**']
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install WDK
+        uses: microsoft/setup-wdk@v1
+        with:
+          wdk-version: '10.0.26100'
+
+      - name: Locate MSBuild
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          "VSPATH=$vs" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build x64 Release
+        shell: cmd
+        run: |
+          "%VSPATH%\MSBuild\Current\Bin\amd64\MSBuild.exe" src\Driver\drivelogcache.vcxproj /p:Configuration=Release /p:Platform=x64 /p:OutDir=%CD%\out\\ /p:IntDir=%CD%\out\obj\\ /m /v:m
+
+      - name: Check output
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse out | Select-Object FullName, Length | Format-Table -AutoSize
+          if (-not (Test-Path 'out\drivelogcache.sys')) { throw 'drivelogcache.sys not produced' }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver-x64-release
+          path: |
+            out/drivelogcache.sys
+            out/drivelogcache.inf
+            out/*.cer
+          if-no-files-found: error
