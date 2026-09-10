@@ -1,0 +1,72 @@
+;
+; drivelogcache.inf - DriveLogCache minifilter 驱动安装信息
+;
+; 适用: Windows 10/11 x64
+; 注意: 64 位 Windows 加载未签名驱动需要开启测试签名:
+;       bcdedit /set testsigning on  (重启生效)
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = "ActivityMonitor"
+ClassGuid   = {b86dff51-a31e-4bac-b3cf-e8cfe75c9fc2}
+Provider    = %ProviderName%
+CatalogFile = drivelogcache.cat
+DriverVer   = 09/09/2026,1.0.0.0
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 12
+MiniFilter.DriverFiles = 12   ; %windir%\system32\drivers
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+drivelogcache.sys = 1,,
+
+[DefaultInstall]
+OptionDesc = %ServiceDescription%
+CopyFiles  = MiniFilter.DriverFiles
+AddReg     = MiniFilter.AddReg
+
+[DefaultInstall.Services]
+AddService = %ServiceName%,,MiniFilter.Service
+
+[DefaultInstall.NTamd64]
+OptionDesc = %ServiceDescription%
+CopyFiles  = MiniFilter.DriverFiles
+AddReg     = MiniFilter.AddReg
+
+[DefaultInstall.NTamd64.Services]
+AddService = %ServiceName%,,MiniFilter.Service
+
+[MiniFilter.Service]
+DisplayName    = %ServiceName%
+Description    = %ServiceDescription%
+ServiceBinary  = %12%\%DriverName%.sys
+Dependencies   = "FltMgr"
+ServiceType    = 2
+StartType      = 3
+ErrorControl   = 1
+LoadOrderGroup = "FSFilter Activity Monitor"
+AddReg         = MiniFilter.AddReg
+
+[MiniFilter.AddReg]
+HKR,"Instances","DefaultInstance",0x00000000,%DefaultInstance%
+HKR,"Instances\"%Instance1.Name%,"Altitude",0x00000000,%Instance1.Altitude%
+HKR,"Instances\"%Instance1.Name%,"Flags",0x00010001,%Instance1.Flags%
+
+[MiniFilter.DriverFiles]
+%DriverName%.sys
+
+[Strings]
+ProviderName       = "DriveLogCache"
+DiskName           = "DriveLogCache Installation Disk"
+DriverName         = "drivelogcache"
+ServiceName        = "drivelogcache"
+ServiceDescription = "DriveLogCache NTFS Read Cache Minifilter"
+DefaultInstance    = "DlcInstance"
+Instance1.Name     = "DlcInstance"
+Instance1.Altitude = "389901"
+Instance1.Flags    = 0
